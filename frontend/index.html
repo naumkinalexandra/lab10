@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Учебный ипотечный ML-сервис</title>
+<style>
+body{font:16px system-ui,sans-serif;background:#f3f5fa;color:#172033;max-width:900px;margin:28px auto;padding:0 16px}
+main{background:white;padding:24px;border-radius:16px;box-shadow:0 8px 28px #14213d12}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{display:block;font-weight:600;margin:10px 0 5px}input,button{box-sizing:border-box;width:100%;padding:10px;border:1px solid #cbd2df;border-radius:8px;font:inherit}
+button{background:#244cc4;color:white;border:0;margin-top:14px;cursor:pointer}.notice{color:#5d6575}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f4f8;padding:14px;border-radius:8px}
+</style></head><body><main>
+<h1>Предсказание одобрения ипотеки</h1>
+<p class="notice">Учебный прототип. Результат не является финансовой рекомендацией и не подходит для реальных кредитных решений.</p>
+<h2>Данные клиента</h2><p>Поля строятся по признакам обученной модели.</p><div id="fields" class="grid"></div>
+<button id="predict">Получить предсказание</button><hr><h2>Предсказание для CSV</h2>
+<label for="csv">Выберите CSV</label><input id="csv" type="file" accept=".csv">
+<button id="csvButton">Обработать CSV</button><pre id="result">Загрузка схемы модели…</pre>
+</main><script>
+const result=document.querySelector("#result");
+async function init(){try{const r=await fetch("/schema");const d=await r.json();if(!r.ok)throw Error(d.detail||"Модель не готова");
+const box=document.querySelector("#fields");box.replaceChildren();d.features.forEach((name,i)=>{const wrap=document.createElement("div"),label=document.createElement("label"),input=document.createElement("input");label.htmlFor="f"+i;label.textContent=name;input.id="f"+i;input.dataset.feature=name;input.required=true;input.placeholder="Введите значение";wrap.append(label,input);box.append(wrap)});result.textContent="Модель готова. Признаков: "+d.features.length}catch(e){result.textContent=e.message}}
+document.querySelector("#predict").onclick=async()=>{const obj={};for(const el of document.querySelectorAll("[data-feature]")){if(!el.value.trim()){result.textContent="Заполните поле "+el.dataset.feature;return}obj[el.dataset.feature]=el.value.trim()}
+try{const r=await fetch("/predict",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(obj)}),d=await r.json();if(!r.ok)throw Error(d.detail||"Ошибка");result.textContent=JSON.stringify(d,null,2)}catch(e){result.textContent=e.message}};
+document.querySelector("#csvButton").onclick=async()=>{const f=document.querySelector("#csv").files[0];if(!f){result.textContent="Выберите CSV";return}const form=new FormData();form.append("file",f);try{const r=await fetch("/predict-from-csv",{method:"POST",body:form}),d=await r.json();if(!r.ok)throw Error(d.detail||"Ошибка");result.textContent=JSON.stringify(d,null,2)}catch(e){result.textContent=e.message}};init();
+</script></body></html>
